@@ -72,12 +72,19 @@ struct Cont {
     const Y _y;
 };
 
-
 // test
-constexpr static auto res =
-Just{12} | Cont{[](const auto i) { return i + 1; }} | Cont{[](const auto i) -> Either<int, float> {
-if (i == 12) return {14, nullptr};
-return {nullptr, 12.0};
-}} | Cont{[](const auto i) { return i; },
-[](const auto f) { return f + 2.0; }};
-static_assert(*res._r == 14.0);
+int main() {
+    constexpr static auto res =
+            Just{12}
+            | Cont{[](const auto i) { return i + 1; }}
+            | Cont{[](const auto i) -> Either<int, float> {
+                if (i == 12) return {14, nullptr};
+                return {nullptr, 12.0};
+            }}
+            | Cont{[](const auto i) { return i; },
+                   [](const auto f) { return f + 2.0; }};
+
+    static_assert(*res._r == 14.0);
+
+    return 0;
+}
