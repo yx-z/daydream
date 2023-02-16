@@ -1,2 +1,0 @@
-# daydream
-Random code snippets
