@@ -51,8 +51,7 @@ struct Cont {
     template<typename T>
     constexpr auto operator()(const Just<T> &j) const {
         auto res = _x(j._t);
-        if constexpr (is_instance<decltype(res), Just>::value ||
-                      is_instance<decltype(res), Either>::value) {
+        if constexpr (is_instance<decltype(res), Just>::value || is_instance<decltype(res), Either>::value) {
             return res;
         } else {
             return Just{res};
