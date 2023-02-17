@@ -100,6 +100,17 @@ struct Continuation {
             : _leftCont{std::move(leftCont)},
               _rightCont{std::move(rightCont)} {}
 
+    template<typename LeftContOther, typename RightContOther>
+    constexpr auto operator|(const Continuation<LeftContOther, RightContOther> &other) const {
+        const auto chainLeft = [other, *this](const auto &l) {
+            return other._leftCont(_leftCont(l));
+        };
+        const auto chainRight = [other, *this](const auto &r) {
+            return other._rightCont(_rightCont(r));
+        };
+        return Continuation<decltype(chainLeft), decltype(chainRight)>{chainLeft, chainRight};
+    }
+
     template<typename T>
     constexpr auto operator()(const Just<T> &just) const {
         auto res = _leftCont(*just);
@@ -119,7 +130,6 @@ struct Continuation {
         return {nullptr, _rightCont(either.get_right())};
     }
 
-private:
     const LeftCont _leftCont;
     const RightCont _rightCont;
 };
@@ -134,7 +144,7 @@ using Maybe = Either<T, std::nullptr_t>;
 
 // test
 int main() {
-    constexpr static auto res =
+    constexpr static auto basicUsage =
             Just{12}
             | Continuation{[](const auto i) { return i + 1; }}
             | Continuation{[](const auto i) -> Either<int, float> {
@@ -145,9 +155,26 @@ int main() {
                            [](const auto f) { return f + 2.0; }}
             | continueRight([](const auto f) { return f * 2.0; });
 
-    static_assert(!res.has_left());
+    static_assert(!basicUsage.has_left());
+    static_assert(basicUsage.right_or(0.0) == 28.0);
 
-    static_assert(res.right_or(0.0) == 28.0);
+    constexpr static auto justOperations =
+            Continuation{[](const auto i) { return i + 1; }} | Continuation{[](const auto i) { return i + 2; }};
+    constexpr static auto res1 = Just{0} | justOperations;
+    static_assert(*res1 == 3);
+    constexpr static auto res2 = Just{1} | justOperations;
+    static_assert(*res2 == 4);
+
+    constexpr static auto eitherOperations =
+            Continuation{[](const auto i) { return i + 1; }, [](const auto f) { return f + 2.0; }} |
+            Continuation{[](const auto i) { return i + 2; }, [](const auto f) { return f + 3.0; }};
+    constexpr static auto resL = Either<int, float>{1, nullptr} | eitherOperations;
+    static_assert(!resL.has_right());
+    static_assert(resL.left_or(0) == 4);
+
+    constexpr static auto resR = Either<int, float>{nullptr, 10.0} | eitherOperations;
+    static_assert(!resR.has_left());
+    static_assert(resR.right_or(0.0) == 15.0);
 
     return 0;
 }
