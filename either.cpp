@@ -52,23 +52,6 @@ struct Either {
         return cont(*this);
     }
 
-    constexpr L left_or(L l) const {
-        return _left ? *_left : l;
-    }
-
-    template<typename Func>
-    constexpr L left_or_eval(Func func) const {
-        return _left ? *_left : func();
-    }
-
-    constexpr R right_or(R r) const {
-        return _right ? *_right : r;
-    }
-
-    template<typename Func>
-    constexpr R right_or_eval(Func func) const {
-        return _right ? *_right : func();
-    }
 
     constexpr bool has_left() const {
         return bool(_left);
@@ -84,6 +67,24 @@ struct Either {
 
     constexpr R get_right() const {
         return *_right;
+    }
+
+    constexpr L left_or(L l) const {
+        return has_left() ? get_left() : l;
+    }
+
+    template<typename Func>
+    constexpr L left_or_eval(Func func) const {
+        return has_left() ? get_left() : func();
+    }
+
+    constexpr R right_or(R r) const {
+        return has_right() ? get_right() : r;
+    }
+
+    template<typename Func>
+    constexpr R right_or_eval(Func func) const {
+        return has_right() ? get_right() : func();
     }
 
 private:
@@ -142,11 +143,11 @@ int main() {
             }}
             | Continuation{[](const auto i) { return i; },
                            [](const auto f) { return f + 2.0; }}
-            | continueRight([](const auto f) { return f; });
+            | continueRight([](const auto f) { return f * 2.0; });
 
     static_assert(!res.has_left());
 
-    static_assert(res.right_or(0.0) == 14.0);
+    static_assert(res.right_or(0.0) == 28.0);
 
     return 0;
 }
