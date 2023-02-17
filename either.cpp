@@ -141,7 +141,8 @@ int main() {
                 return {nullptr, 12.0};
             }}
             | Continuation{[](const auto i) { return i; },
-                           [](const auto f) { return f + 2.0; }};
+                           [](const auto f) { return f + 2.0; }}
+            | continueRight([](const auto f) { return f; });
 
     static_assert(!res.has_left());
 
