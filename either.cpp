@@ -3,12 +3,13 @@
 #include <optional>
 #include <type_traits>
 
+// is_instance<X, BaseTemplate>::value is true iff. X is of type BaseTemplate<T...> for some T...
 template<typename, template<typename...> typename>
 struct is_instance : public std::false_type {
 };
 
-template<typename... T, template<typename...> typename U>
-struct is_instance<U<T...>, U> : public std::true_type {
+template<typename... T, template<typename...> typename BaseTemplate>
+struct is_instance<BaseTemplate<T...>, BaseTemplate> : public std::true_type {
 };
 
 
@@ -22,6 +23,10 @@ struct Just {
     template<typename X, typename Y>
     constexpr auto operator|(const Cont<X, Y> &cont) const {
         return cont(*this);
+    }
+
+    constexpr operator T() {
+        return _t;
     }
 
     const T _t;
@@ -38,15 +43,41 @@ struct Either {
         return cont(*this);
     }
 
+    constexpr L left_or(L l) const {
+        return _l ? *_l : l;
+    }
+
+    template<typename Func>
+    constexpr L left_or_eval(Func func) const {
+        return _l ? *_l : func();
+    }
+
+    constexpr R right_or(R r) const {
+        return _r ? *_r : r;
+    }
+
+    template<typename Func>
+    constexpr R right_or_eval(Func func) const {
+        return _r ? *_r : func();
+    }
+
+    bool constexpr is_left() const {
+        return bool(_l);
+    }
+
+    bool constexpr is_right() const {
+        return bool(_r);
+    }
+
     const std::optional<L> _l;
     const std::optional<R> _r;
 };
 
-constexpr static auto noOp = [](auto t) { return t; };
+constexpr static auto identity = [](const auto &t) { return t; };
 
-template<typename X, typename Y = decltype(noOp)>
+template<typename X, typename Y = decltype(identity)>
 struct Cont {
-    constexpr Cont(X x, Y y = noOp) : _x{std::move(x)}, _y{std::move(y)} {}
+    constexpr Cont(X x, Y y = identity) : _x{std::move(x)}, _y{std::move(y)} {}
 
     template<typename T>
     constexpr auto operator()(const Just<T> &j) const {
@@ -71,6 +102,14 @@ struct Cont {
     const Y _y;
 };
 
+template<typename Func>
+constexpr static auto continueRight(Func rightFunc) {
+    return Cont{identity, std::move(rightFunc)};
+}
+
+template<typename T>
+using Maybe = Either<T, std::nullptr_t>;
+
 // test
 int main() {
     constexpr static auto res =
@@ -83,7 +122,7 @@ int main() {
             | Cont{[](const auto i) { return i; },
                    [](const auto f) { return f + 2.0; }};
 
-    static_assert(*res._r == 14.0);
+    static_assert(res.right_or(0.0) == 14.0);
 
     return 0;
 }
