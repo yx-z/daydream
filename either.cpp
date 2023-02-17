@@ -3,7 +3,7 @@
 #include <optional>
 #include <type_traits>
 
-// is_instance<X, BaseTemplate>::value is true iff. X is of type BaseTemplate<T...> for some T...
+// is_instance<LeftCont, BaseTemplate>::value is true iff. LeftCont is of type BaseTemplate<T...> for some T...
 template<typename, template<typename...> typename>
 struct is_instance : public std::false_type {
 };
@@ -18,7 +18,15 @@ struct Cont;
 
 template<typename T>
 struct Just {
-    constexpr Just(T t) : _t{std::move(t)} {}
+    constexpr Just(T t) : _value{std::move(t)} {}
+
+    constexpr T operator*() const {
+        return get();
+    }
+
+    constexpr T get() const {
+        return _value;
+    }
 
     template<typename X, typename Y>
     constexpr auto operator|(const Cont<X, Y> &cont) const {
@@ -26,17 +34,18 @@ struct Just {
     }
 
     constexpr operator T() {
-        return _t;
+        return get();
     }
 
-    const T _t;
+private:
+    const T _value;
 };
 
 template<typename L, typename R>
 struct Either {
-    constexpr Either(L l, std::nullptr_t) : _l{std::move(l)} {}
+    constexpr Either(L l, std::nullptr_t) : _left{std::move(l)} {}
 
-    constexpr Either(std::nullptr_t, R r) : _r{std::move(r)} {}
+    constexpr Either(std::nullptr_t, R r) : _right{std::move(r)} {}
 
     template<typename X, typename Y>
     constexpr auto operator|(const Cont<X, Y> &cont) const {
@@ -44,44 +53,54 @@ struct Either {
     }
 
     constexpr L left_or(L l) const {
-        return _l ? *_l : l;
+        return _left ? *_left : l;
     }
 
     template<typename Func>
     constexpr L left_or_eval(Func func) const {
-        return _l ? *_l : func();
+        return _left ? *_left : func();
     }
 
     constexpr R right_or(R r) const {
-        return _r ? *_r : r;
+        return _right ? *_right : r;
     }
 
     template<typename Func>
     constexpr R right_or_eval(Func func) const {
-        return _r ? *_r : func();
+        return _right ? *_right : func();
     }
 
-    bool constexpr is_left() const {
-        return bool(_l);
+    constexpr bool has_left() const {
+        return bool(_left);
     }
 
-    bool constexpr is_right() const {
-        return bool(_r);
+    constexpr bool has_right() const {
+        return bool(_right);
     }
 
-    const std::optional<L> _l;
-    const std::optional<R> _r;
+    constexpr L get_left() const {
+        return *_left;
+    }
+
+    constexpr R get_right() const {
+        return *_right;
+    }
+
+private:
+    const std::optional<L> _left;
+    const std::optional<R> _right;
 };
 
 constexpr static auto identity = [](const auto &t) { return t; };
 
-template<typename X, typename Y = decltype(identity)>
+template<typename LeftCont, typename RightCont = decltype(identity)>
 struct Cont {
-    constexpr Cont(X x, Y y = identity) : _x{std::move(x)}, _y{std::move(y)} {}
+    constexpr Cont(LeftCont leftCont, RightCont rightCont = identity) : _leftCont{std::move(leftCont)},
+                                                                        _rightCont{std::move(rightCont)} {}
 
     template<typename T>
-    constexpr auto operator()(const Just<T> &j) const {
-        auto res = _x(j._t);
+    constexpr auto operator()(const Just<T> &just) const {
+        auto res = _leftCont(*just);
         if constexpr (is_instance<decltype(res), Just>::value || is_instance<decltype(res), Either>::value) {
             return res;
         } else {
@@ -90,16 +109,17 @@ struct Cont {
     }
 
     template<typename L, typename R>
-    constexpr auto operator()(const Either<L, R> &e) const
-    -> Either<std::invoke_result_t<X, L>, std::invoke_result_t<Y, R>> {
-        if (e._l) {
-            return {_x(*e._l), nullptr};
+    constexpr auto operator()(const Either<L, R> &either) const
+    -> Either<std::invoke_result_t<LeftCont, L>, std::invoke_result_t<RightCont, R>> {
+        if (either.has_left()) {
+            return {_leftCont(either.get_left()), nullptr};
         }
-        return {nullptr, _y(*e._r)};
+        return {nullptr, _rightCont(either.get_right())};
     }
 
-    const X _x;
-    const Y _y;
+private:
+    const LeftCont _leftCont;
+    const RightCont _rightCont;
 };
 
 template<typename Func>
@@ -121,6 +141,8 @@ int main() {
             }}
             | Cont{[](const auto i) { return i; },
                    [](const auto f) { return f + 2.0; }};
+
+    static_assert(!res.has_left());
 
     static_assert(res.right_or(0.0) == 14.0);
 
