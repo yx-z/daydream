@@ -14,7 +14,7 @@ struct is_instance<BaseTemplate<T...>, BaseTemplate> : public std::true_type {
 
 
 template<typename X, typename Y>
-struct Cont;
+struct Continuation;
 
 template<typename T>
 struct Just {
@@ -29,7 +29,7 @@ struct Just {
     }
 
     template<typename X, typename Y>
-    constexpr auto operator|(const Cont<X, Y> &cont) const {
+    constexpr auto operator|(const Continuation<X, Y> &cont) const {
         return cont(*this);
     }
 
@@ -48,7 +48,7 @@ struct Either {
     constexpr Either(std::nullptr_t, R r) : _right{std::move(r)} {}
 
     template<typename X, typename Y>
-    constexpr auto operator|(const Cont<X, Y> &cont) const {
+    constexpr auto operator|(const Continuation<X, Y> &cont) const {
         return cont(*this);
     }
 
@@ -94,9 +94,10 @@ private:
 constexpr static auto identity = [](const auto &t) { return t; };
 
 template<typename LeftCont, typename RightCont = decltype(identity)>
-struct Cont {
-    constexpr Cont(LeftCont leftCont, RightCont rightCont = identity) : _leftCont{std::move(leftCont)},
-                                                                        _rightCont{std::move(rightCont)} {}
+struct Continuation {
+    constexpr Continuation(LeftCont leftCont, RightCont rightCont = identity)
+            : _leftCont{std::move(leftCont)},
+              _rightCont{std::move(rightCont)} {}
 
     template<typename T>
     constexpr auto operator()(const Just<T> &just) const {
@@ -124,7 +125,7 @@ private:
 
 template<typename Func>
 constexpr static auto continueRight(Func rightFunc) {
-    return Cont{identity, std::move(rightFunc)};
+    return Continuation{identity, std::move(rightFunc)};
 }
 
 template<typename T>
@@ -134,13 +135,13 @@ using Maybe = Either<T, std::nullptr_t>;
 int main() {
     constexpr static auto res =
             Just{12}
-            | Cont{[](const auto i) { return i + 1; }}
-            | Cont{[](const auto i) -> Either<int, float> {
+            | Continuation{[](const auto i) { return i + 1; }}
+            | Continuation{[](const auto i) -> Either<int, float> {
                 if (i == 12) return {14, nullptr};
                 return {nullptr, 12.0};
             }}
-            | Cont{[](const auto i) { return i; },
-                   [](const auto f) { return f + 2.0; }};
+            | Continuation{[](const auto i) { return i; },
+                           [](const auto f) { return f + 2.0; }};
 
     static_assert(!res.has_left());
 
