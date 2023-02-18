@@ -91,12 +91,6 @@ private:
     const std::optional<R> _right;
 };
 
-constexpr static auto identity = [](const auto &t) { return t; };
-
-template<typename Func>
-constexpr static auto continueRight(const Func &rightFunc) {
-    return Continuation{identity, std::move(rightFunc)};
-}
 
 template<typename T>
 struct Maybe : Either<T, std::nullptr_t> {
@@ -130,7 +124,7 @@ struct Maybe : Either<T, std::nullptr_t> {
     }
 
     constexpr Maybe<T> operator||(const Maybe<T> &other) const {
-        return value_or(std::move(other));
+        return value_or(other);
     }
 
     constexpr T value_or(const T &t) const {
@@ -138,7 +132,7 @@ struct Maybe : Either<T, std::nullptr_t> {
     }
 
     constexpr T operator||(const T &t) const {
-        return value_or(std::move(t));
+        return value_or(t);
     }
 
     template<typename Func>
@@ -152,6 +146,13 @@ struct Maybe : Either<T, std::nullptr_t> {
     }
 };
 
+
+constexpr static auto identity = [](const auto &t) { return t; };
+
+template<typename Func>
+constexpr static auto continueRight(const Func &rightFunc) {
+    return Continuation{identity, std::move(rightFunc)};
+}
 
 template<typename LeftCont, typename RightCont = decltype(identity)>
 struct Continuation {
