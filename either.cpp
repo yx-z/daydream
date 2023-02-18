@@ -20,11 +20,11 @@ template<typename T>
 struct Just {
     constexpr Just(T t) : _value{std::move(t)} {}
 
-    constexpr T operator*() const {
+    constexpr const T& operator*() const {
         return get();
     }
 
-    constexpr T get() const {
+    constexpr const T& get() const {
         return _value;
     }
 
@@ -60,11 +60,11 @@ struct Either {
         return bool(_right);
     }
 
-    constexpr L get_left() const {
+    constexpr const L& get_left() const {
         return *_left;
     }
 
-    constexpr R get_right() const {
+    constexpr const R& get_right() const {
         return *_right;
     }
 
@@ -98,11 +98,11 @@ struct Maybe : Either<T, std::nullptr_t> {
 
     constexpr Maybe(T value) : Either<T, std::nullptr_t>{value, nullptr} {}
 
-    constexpr T value() const {
+    constexpr const T& value() const {
         return this->get_left();
     }
 
-    constexpr T operator*() const {
+    constexpr const T& operator*() const {
         return value();
     }
 
