@@ -21,7 +21,7 @@ struct Either {
     constexpr Either(L l, std::nullptr_t) : _left{std::move(l)} {}
 
     template<typename L2, typename R2>
-    constexpr Either(const Either<L2, R2>& e) : _left{e.get_left()}, _right{e.get_right()} {}
+    constexpr Either(const Either<L2, R2>& e) : _left{e.left()}, _right{e.right()} {}
 
     constexpr Either(std::nullptr_t, R r) : _right{std::move(r)} {}
 
@@ -33,30 +33,30 @@ struct Either {
         return bool(_right);
     }
 
-    constexpr const L& get_left() const {
+    constexpr const L& left() const {
         return *_left;
     }
 
-    constexpr const R& get_right() const {
+    constexpr const R& right() const {
         return *_right;
     }
 
     constexpr L left_or(const L& l) const {
-        return has_left() ? get_left() : l;
+        return has_left() ? left() : l;
     }
 
     template<typename Func>
     constexpr L left_or_eval(const Func& func) const {
-        return has_left() ? get_left() : func();
+        return has_left() ? left() : func();
     }
 
     constexpr R right_or(const R& r) const {
-        return has_right() ? get_right() : r;
+        return has_right() ? right() : r;
     }
 
     template<typename Func>
     constexpr R right_or_eval(const Func& func) const {
-        return has_right() ? get_right() : func();
+        return has_right() ? right() : func();
     }
 
     template<typename LeftCont, typename RightCont>
@@ -74,13 +74,13 @@ template<typename T>
 struct Maybe : private Either<T, std::nullptr_t> {
     constexpr Maybe() : Either<T, std::nullptr_t>{nullptr, nullptr} {}
 
-    constexpr Maybe(T value) : Either<T, std::nullptr_t>{value, nullptr} {}
+    constexpr Maybe(T value) : Either<T, std::nullptr_t>{std::move(value), nullptr} {}
 
     template<typename U>
     constexpr Maybe(const Maybe<U>& maybe) : Either<T, std::nullptr_t>{maybe ? *maybe : nullptr, nullptr} {}
 
     constexpr const T& value() const {
-        return this->get_left();
+        return this->left();
     }
 
     constexpr const T& operator*() const {
@@ -133,7 +133,7 @@ struct Just : Maybe<T> {
     constexpr Just(T t) : Maybe<T>{std::move(t)} {}
 
     template<typename U>
-    constexpr Just(const Just<U>& t) : Maybe<T>{std::move(t)} {}
+    constexpr Just(const Just<U>& t) : Maybe<T>{t} {}
 
     constexpr operator T() {
         return this->value();
@@ -171,12 +171,12 @@ struct Continuation {
 
     template<typename E, std::enable_if_t<is_instance<E, Either>::value, int> = 0>
     constexpr auto operator()(const E& either) const {
-        using L = decltype(_leftCont(either.get_left()));
-        using R = decltype(_rightCont(either.get_right()));
+        using L = decltype(_leftCont(either.left()));
+        using R = decltype(_rightCont(either.right()));
         if (either.has_left()) {
-            return Either<L, R>{_leftCont(either.get_left()), nullptr};
+            return Either<L, R>{_leftCont(either.left()), nullptr};
         }
-        return Either<L, R>{nullptr, _rightCont(either.get_right())};
+        return Either<L, R>{nullptr, _rightCont(either.right())};
     }
 
     template<typename M, std::enable_if_t<is_instance<M, Maybe>::value, int> = 0>
