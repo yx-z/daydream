@@ -16,34 +16,6 @@ struct is_instance<BaseTemplate<T...>, BaseTemplate> : public std::true_type {
 template<typename X, typename Y>
 struct Continuation;
 
-template<typename T>
-struct Just {
-    constexpr Just(T t) : _value{std::move(t)} {}
-
-    template<typename U>
-    constexpr Just(const Just<U>& t) : _value{t} {}
-
-    constexpr const T& operator*() const {
-        return get();
-    }
-
-    constexpr const T& get() const {
-        return _value;
-    }
-
-    template<typename X, typename Y>
-    constexpr auto operator|(const Continuation<X, Y>& cont) const {
-        return cont(*this);
-    }
-
-    constexpr operator T() {
-        return get();
-    }
-
-private:
-    const T _value;
-};
-
 template<typename L, typename R>
 struct Either {
     constexpr Either(L l, std::nullptr_t) : _left{std::move(l)} {}
@@ -52,11 +24,6 @@ struct Either {
     constexpr Either(const Either<L2, R2>& e) : _left{e.get_left()}, _right{e.get_right()} {}
 
     constexpr Either(std::nullptr_t, R r) : _right{std::move(r)} {}
-
-    template<typename X, typename Y>
-    constexpr auto operator|(const Continuation<X, Y>& cont) const {
-        return cont(*this);
-    }
 
     constexpr bool has_left() const {
         return bool(_left);
@@ -92,6 +59,11 @@ struct Either {
         return has_right() ? get_right() : func();
     }
 
+    template<typename LeftCont, typename RightCont>
+    constexpr auto operator|(const Continuation<LeftCont, RightCont>& cont) const {
+        return cont(*this);
+    }
+
 private:
     const std::optional<L> _left;
     const std::optional<R> _right;
@@ -99,7 +71,7 @@ private:
 
 
 template<typename T>
-struct Maybe : Either<T, std::nullptr_t> {
+struct Maybe : private Either<T, std::nullptr_t> {
     constexpr Maybe() : Either<T, std::nullptr_t>{nullptr, nullptr} {}
 
     constexpr Maybe(T value) : Either<T, std::nullptr_t>{value, nullptr} {}
@@ -123,8 +95,8 @@ struct Maybe : Either<T, std::nullptr_t> {
         return has_value();
     }
 
-    template<typename X, typename Y>
-    constexpr auto operator&&(const Continuation<X, Y>& cont) const {
+    template<typename LeftCont, typename RightCont>
+    constexpr auto operator&&(const Continuation<LeftCont, RightCont>& cont) const {
         return cont(*this);
     }
 
@@ -156,16 +128,25 @@ struct Maybe : Either<T, std::nullptr_t> {
 };
 
 
-template<typename Predicate>
-constexpr auto checkThenContinue(const Predicate& predicate) {
-    return Continuation{[predicate](const auto& input) {
-        using Ret = Maybe<std::decay_t<decltype(input)>>;
-        return predicate(input) ? Ret{input} : Ret{};
-    }};
-}
+template<typename T>
+struct Just : Maybe<T> {
+    constexpr Just(T t) : Maybe<T>{std::move(t)} {}
+
+    template<typename U>
+    constexpr Just(const Just<U>& t) : Maybe<T>{std::move(t)} {}
+
+    constexpr operator T() {
+        return this->value();
+    }
+
+    template<typename LeftCont, typename RightCont>
+    constexpr auto operator|(const Continuation<LeftCont, RightCont>& cont) const {
+        return cont(*this);
+    }
+};
 
 
-constexpr static auto identity = [](const auto& t) { return t; };
+constexpr inline static auto identity = [](const auto& t) { return t; };
 
 template<typename LeftCont, typename RightCont = decltype(identity)>
 struct Continuation {
@@ -187,27 +168,19 @@ struct Continuation {
         return Continuation<decltype(chainLeft), decltype(chainRight)>{chainLeft, chainRight};
     }
 
-    template<typename T>
-    constexpr auto operator()(const Just<T>& just) const {
-        auto res = _leftCont(*just);
-        if constexpr (is_instance<decltype(res), Just>::value || is_instance<decltype(res), Either>::value) {
-            return res;
-        } else {
-            return Just{res};
-        }
-    }
 
-    template<typename L, typename R>
-    constexpr auto operator()(const Either<L, R>& either) const
-    -> Either<std::invoke_result_t<LeftCont, L>, std::invoke_result_t<RightCont, R>> {
+    template<typename E, std::enable_if_t<is_instance<E, Either>::value, int> = 0>
+    constexpr auto operator()(const E& either) const {
+        using L = decltype(_leftCont(either.get_left()));
+        using R = decltype(_rightCont(either.get_right()));
         if (either.has_left()) {
-            return {_leftCont(either.get_left()), nullptr};
+            return Either<L, R>{_leftCont(either.get_left()), nullptr};
         }
-        return {nullptr, _rightCont(either.get_right())};
+        return Either<L, R>{nullptr, _rightCont(either.get_right())};
     }
 
-    template<typename T>
-    constexpr auto operator()(const Maybe<T>& maybe) const {
+    template<typename M, std::enable_if_t<is_instance<M, Maybe>::value, int> = 0>
+    constexpr auto operator()(const M& maybe) const {
         using Res = decltype(_leftCont(*maybe));
         if constexpr (is_instance<Res, Maybe>::value) {
             return maybe ? _leftCont(*maybe) : Res{};
@@ -217,13 +190,31 @@ struct Continuation {
         }
     }
 
+    template<typename J, std::enable_if_t<is_instance<J, Just>::value, int> = 0>
+    constexpr auto operator()(const J& just) const {
+        auto res = _leftCont(*just);
+        if constexpr (is_instance<decltype(res), Either>::value || is_instance<decltype(res), Maybe>::value) {
+            return res;
+        } else {
+            return Just{res};
+        }
+    }
+
     const LeftCont _leftCont;
     const RightCont _rightCont;
 };
 
 template<typename Func>
-constexpr static auto continueRight(const Func& rightFunc) {
+constexpr static auto ContinueRight(const Func& rightFunc) {
     return Continuation{identity, std::move(rightFunc)};
+}
+
+template<typename Predicate>
+constexpr auto checkThenContinue(const Predicate& predicate) {
+    return Continuation{[predicate](const auto& input) {
+        using Ret = Maybe<std::decay_t<decltype(input)>>;
+        return predicate(input) ? Ret{input} : Ret{};
+    }};
 }
 
 // Test
@@ -236,9 +227,8 @@ constexpr static auto basicUsage =
             if (i == 12) return {14, nullptr};
             return {nullptr, 12.0};
         }}
-        | Continuation{[](const auto i) { return i; },
-                       [](const auto f) { return f + 2.0; }}
-        | continueRight([](const auto f) { return f * 2.0; });
+        | Continuation{[](const auto i) { return i; }, [](const auto f) { return f + 2.0; }}
+        | ContinueRight([](const auto f) { return f * 2.0; });
 
 static_assert(!basicUsage.has_left());
 static_assert(basicUsage.right_or(0.0) == 28.0);
@@ -269,14 +259,12 @@ static_assert((empty || 13) == 13);
 static_assert((empty || []() { return 14; }) == 14);
 
 constexpr static auto hasValue = Maybe<int>{12};
-static_assert(hasValue.value() == 12);
-static_assert(empty || hasValue);
+static_assert(*hasValue == 12);
 static_assert(*(empty || hasValue) == 12);
 
 constexpr static auto anotherValue = Maybe<int>{13};
 static_assert(*(hasValue || anotherValue) == 12);
 static_assert(!(empty && justOperations));
-static_assert(hasValue && justOperations);
 static_assert(*(hasValue && justOperations) == 15);
 static_assert(*(hasValue && checkThenContinue([](const auto i) { return i > 10; })) == 12);
 
