@@ -35,11 +35,11 @@ struct Either {
         return bool(_right);
     }
 
-    constexpr const L& left() const {
+    constexpr const L& left() const noexcept(false) {
         return *_left;
     }
 
-    constexpr const R& right() const {
+    constexpr const R& right() const noexcept(false) {
         return *_right;
     }
 
@@ -48,7 +48,7 @@ struct Either {
     }
 
     template<typename Func>
-    constexpr L left_or_eval(const Func& func) const {
+    constexpr L left_or_eval(Func&& func) const {
         return has_left() ? left() : func();
     }
 
@@ -57,12 +57,12 @@ struct Either {
     }
 
     template<typename Func>
-    constexpr R right_or_eval(const Func& func) const {
+    constexpr R right_or_eval(Func&& func) const {
         return has_right() ? right() : func();
     }
 
-    template<typename LeftCont, typename RightCont>
-    constexpr auto operator|(const Continuation<LeftCont, RightCont>& cont) const {
+    template<typename Func>
+    constexpr auto operator|(Func&& cont) const {
         return cont(*this);
     }
 
@@ -85,11 +85,11 @@ struct Maybe {
         return _val;
     }
 
-    constexpr const T& value() const {
+    constexpr const T& value() const noexcept(false) {
         return *_val;
     }
 
-    constexpr const T& operator*() const {
+    constexpr const T& operator*() const noexcept(false) {
         return value();
     }
 
@@ -101,8 +101,8 @@ struct Maybe {
         return has_value();
     }
 
-    template<typename LeftCont, typename RightCont>
-    constexpr auto operator&&(const Continuation<LeftCont, RightCont>& cont) const {
+    template<typename Func>
+    constexpr auto operator&&(Func&& cont) const {
         return cont(*this);
     }
 
@@ -123,12 +123,12 @@ struct Maybe {
     }
 
     template<typename Func>
-    constexpr T value_or_eval(const Func& func) const {
+    constexpr T value_or_eval(Func&& func) const {
         return has_value() ? value() : func();
     }
 
     template<typename Func, std::enable_if_t<std::is_convertible_v<std::invoke_result_t<Func>, T>, int> = 0>
-    constexpr T operator||(const Func& func) const {
+    constexpr T operator||(Func&& func) const {
         return value_or_eval(func);
     }
 
@@ -156,8 +156,8 @@ struct Just {
         return value();
     }
 
-    template<typename LeftCont, typename RightCont>
-    constexpr auto operator|(const Continuation<LeftCont, RightCont>& cont) const {
+    template<typename Func>
+    constexpr auto operator|(Func&& cont) const {
         return cont(*this);
     }
 
@@ -193,6 +193,7 @@ struct Continuation {
     constexpr auto operator()(const Either<E1, E2>& either) const {
         using L = decltype(_leftCont(either.left()));
         using R = decltype(_rightCont(either.right()));
+
         if (either.has_left()) {
             return Either<L, R>{_leftCont(either.left()), nullptr};
         }
@@ -203,17 +204,26 @@ struct Continuation {
     constexpr auto operator()(const Maybe<T>& maybe) const {
         using Res = decltype(_leftCont(*maybe));
         if constexpr (is_instance<Res, Maybe>::value) {
-            return maybe ? _leftCont(*maybe) : Res{};
+            if (maybe) {
+                return _leftCont(*maybe);
+            }
+            _rightCont(nullptr);
+            return Res{};
         } else {
             using Ret = Maybe<Res>;
-            return maybe ? Ret{_leftCont(*maybe)} : Ret{};
+            if (maybe) {
+                return Ret{_leftCont(*maybe)};
+            }
+            _rightCont(nullptr);
+            return Ret{};
         }
     }
 
     template<typename T>
     constexpr auto operator()(const Just<T>& just) const {
         auto res = _leftCont(just);
-        if constexpr (is_instance<decltype(res), Either>::value) {
+        if constexpr (is_instance<decltype(res), Either>::value ||
+                      is_instance<decltype(res), Maybe>::value) {
             return res;
         } else {
             return Just{res};
