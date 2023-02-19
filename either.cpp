@@ -3,6 +3,8 @@
 #include <optional>
 #include <type_traits>
 
+namespace daydream {
+    
 // is_instance<LeftCont, BaseTemplate>::value is true iff. LeftCont is of type BaseTemplate<T...> for some T...
 template<typename, template<typename...> typename>
 struct is_instance : public std::false_type {
@@ -13,7 +15,7 @@ struct is_instance<BaseTemplate<T...>, BaseTemplate> : public std::true_type {
 };
 
 
-template<typename X, typename Y>
+template<typename LeftCont, typename RightCont>
 struct Continuation;
 
 template<typename L, typename R>
@@ -71,16 +73,20 @@ private:
 
 
 template<typename T>
-struct Maybe : private Either<T, std::nullptr_t> {
-    constexpr Maybe() : Either<T, std::nullptr_t>{nullptr, nullptr} {}
+struct Maybe {
+    constexpr Maybe() {}
 
-    constexpr Maybe(T value) : Either<T, std::nullptr_t>{std::move(value), nullptr} {}
+    constexpr Maybe(T value) : _val{value} {}
 
     template<typename U>
-    constexpr Maybe(const Maybe<U>& maybe) : Either<T, std::nullptr_t>{maybe ? *maybe : nullptr, nullptr} {}
+    constexpr Maybe(const Maybe<U>& maybe) : _val{maybe} {}
+
+    constexpr operator std::optional<T>() const {
+        return _val;
+    }
 
     constexpr const T& value() const {
-        return this->left();
+        return *_val;
     }
 
     constexpr const T& operator*() const {
@@ -88,7 +94,7 @@ struct Maybe : private Either<T, std::nullptr_t> {
     }
 
     constexpr bool has_value() const {
-        return this->has_left();
+        return bool(_val);
     }
 
     constexpr operator bool() const {
@@ -125,24 +131,38 @@ struct Maybe : private Either<T, std::nullptr_t> {
     constexpr T operator||(const Func& func) const {
         return value_or_eval(func);
     }
+
+private: 
+    const std::optional<T> _val;
 };
 
 
 template<typename T>
-struct Just : Maybe<T> {
-    constexpr Just(T t) : Maybe<T>{std::move(t)} {}
+struct Just {
+    constexpr Just(T t) : _val{std::move(t)} {}
 
     template<typename U>
-    constexpr Just(const Just<U>& t) : Maybe<T>{t} {}
+    constexpr Just(const Just<U>& t) : _val{t} {}
 
-    constexpr operator T() {
-        return this->value();
+    constexpr const T& value() const {
+        return _val;
+    }
+
+    constexpr const T& operator*() const {
+        return value();
+    }
+
+    constexpr operator T() const {
+        return value();
     }
 
     template<typename LeftCont, typename RightCont>
     constexpr auto operator|(const Continuation<LeftCont, RightCont>& cont) const {
         return cont(*this);
     }
+
+private:
+    const T _val;
 };
 
 
@@ -169,8 +189,8 @@ struct Continuation {
     }
 
 
-    template<typename E, std::enable_if_t<is_instance<E, Either>::value, int> = 0>
-    constexpr auto operator()(const E& either) const {
+    template<typename E1, typename E2>
+    constexpr auto operator()(const Either<E1, E2>& either) const {
         using L = decltype(_leftCont(either.left()));
         using R = decltype(_rightCont(either.right()));
         if (either.has_left()) {
@@ -179,8 +199,8 @@ struct Continuation {
         return Either<L, R>{nullptr, _rightCont(either.right())};
     }
 
-    template<typename M, std::enable_if_t<is_instance<M, Maybe>::value, int> = 0>
-    constexpr auto operator()(const M& maybe) const {
+    template<typename T>
+    constexpr auto operator()(const Maybe<T>& maybe) const {
         using Res = decltype(_leftCont(*maybe));
         if constexpr (is_instance<Res, Maybe>::value) {
             return maybe ? _leftCont(*maybe) : Res{};
@@ -190,10 +210,10 @@ struct Continuation {
         }
     }
 
-    template<typename J, std::enable_if_t<is_instance<J, Just>::value, int> = 0>
-    constexpr auto operator()(const J& just) const {
-        auto res = _leftCont(*just);
-        if constexpr (is_instance<decltype(res), Either>::value || is_instance<decltype(res), Maybe>::value) {
+    template<typename T>
+    constexpr auto operator()(const Just<T>& just) const {
+        auto res = _leftCont(just);
+        if constexpr (is_instance<decltype(res), Either>::value) {
             return res;
         } else {
             return Just{res};
@@ -268,4 +288,7 @@ static_assert(!(empty && justOperations));
 static_assert(*(hasValue && justOperations) == 15);
 static_assert(*(hasValue && check([](const auto i) { return i > 10; })) == 12);
 
-int main() {}
+} // namespace daydream
+
+int main() { return 0; }
+
