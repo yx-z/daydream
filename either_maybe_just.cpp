@@ -298,15 +298,17 @@ constexpr static auto empty = Maybe<int>{};
 static_assert(!empty);
 static_assert((empty || 13) == 13);
 static_assert((empty || []() { return 14; }) == 14);
+static_assert(!(empty && justOperations));
 
 constexpr static auto hasValue = Maybe{12};
 static_assert(*hasValue == 12);
 static_assert(*(empty || hasValue) == 12);
 
+static_assert((hasValue || 13) == 12);
 static_assert(*(hasValue || Maybe{13}) == 12);
-static_assert(!(empty && justOperations));
 static_assert(*(hasValue && justOperations) == 15);
 static_assert(*(hasValue && check([](const auto i) { return i > 10; })) == 12);
+static_assert(!(hasValue && check([](const auto i) { return i > 100; })));
 
 } // namespace daydream
 
