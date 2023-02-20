@@ -272,8 +272,8 @@ struct Continue {
 };
 
 template <typename Func>
-constexpr static auto ContinueRight(Func&& rightFunc) {
-    return Continue{identity, std::move(rightFunc)};
+constexpr static auto ContinueRight(const Func& rightFunc) {
+    return Continue{identity, rightFunc};
 }
 
 template <typename Predicate>
