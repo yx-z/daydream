@@ -1,4 +1,4 @@
-// An Either Monad in C++17
+// Either/Maybe/Just Monad in C++17
 
 #include <optional>
 #include <type_traits>
