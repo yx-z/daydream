@@ -81,8 +81,9 @@ struct DropRight {
 
   template <typename L, typename R>
   constexpr Maybe<L> operator()(const Either<L, R>& either) {
-    if (either.has_left())
+    if (either.has_left()) {
       return either.left();
+    }
     return {};
   }
 };
@@ -92,8 +93,9 @@ struct DropLeft {
 
   template <typename L, typename R>
   constexpr Maybe<R> operator()(const Either<L, R>& either) {
-    if (either.has_right())
+    if (either.has_right()) {
       return either.right();
+    }
     return {};
   }
 };
