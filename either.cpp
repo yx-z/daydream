@@ -21,11 +21,14 @@ struct Continuation;
 template<typename L, typename R>
 struct Either {
     constexpr Either(L l, std::nullptr_t) : _left{std::move(l)} {}
+    
+    constexpr Either(std::nullptr_t, R r) : _right{std::move(r)} {}
 
     template<typename L2, typename R2>
     constexpr Either(const Either<L2, R2>& e) : _left{e.left()}, _right{e.right()} {}
 
-    constexpr Either(std::nullptr_t, R r) : _right{std::move(r)} {}
+    template<typename L2, typename R2>
+    constexpr Either(Either<L2, R2>&& e) : _left{std::move(e.left())}, _right{std::move(e.right())} {}
 
     constexpr bool has_left() const {
         return bool(_left);
@@ -80,6 +83,9 @@ struct Maybe {
 
     template<typename U>
     constexpr Maybe(const Maybe<U>& maybe) : _val{maybe} {}
+
+    template <typename U>
+    constexpr Maybe(Maybe<U>&& maybe) : _val{std::move(maybe)} {}
 
     constexpr operator std::optional<T>() const {
         return _val;
@@ -143,6 +149,9 @@ struct Just {
 
     template<typename U>
     constexpr Just(const Just<U>& t) : _val{t} {}
+
+    template <typename U>
+    constexpr Just(Just<U>&& t) : _val{t} {}
 
     constexpr const T& value() const {
         return _val;
