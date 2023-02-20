@@ -277,10 +277,10 @@ constexpr static auto ContinueRight(const Func& rightFunc) {
 }
 
 template <typename Predicate>
-constexpr auto check(Predicate&& predicate) {
-    return Continue{[predicate](const auto& input) {
+constexpr auto check(Predicate predicate) {
+    return Continue{[pred = std::move(predicate)](const auto& input) {
         using Ret = Maybe<std::decay_t<decltype(input)> >;
-        return predicate(input) ? Ret{input} : Ret{};
+        return pred(input) ? Ret{input} : Ret{};
     }};
 }
 
