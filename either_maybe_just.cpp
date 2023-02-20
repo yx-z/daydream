@@ -304,8 +304,7 @@ constexpr static auto hasValue = Maybe<int>{12};
 static_assert(*hasValue == 12);
 static_assert(*(empty || hasValue) == 12);
 
-constexpr static auto anotherValue = Maybe<int>{13};
-static_assert(*(hasValue || anotherValue) == 12);
+static_assert(*(hasValue || Maybe<int>{13}) == 12);
 static_assert(!(empty && justOperations));
 static_assert(*(hasValue && justOperations) == 15);
 static_assert(*(hasValue && check([](const auto i) { return i > 10; })) == 12);
