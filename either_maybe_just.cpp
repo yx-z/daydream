@@ -180,19 +180,22 @@ constexpr inline static auto identity = [](const auto& t) { return t; };
 template<typename LeftCont, typename RightCont = decltype(identity)>
 struct Continuation {
     constexpr Continuation(LeftCont leftCont, RightCont rightCont = identity)
-            : _leftCont{std::move(leftCont)},
-              _rightCont{std::move(rightCont)} {}
+            : left{std::move(leftCont)},
+              right{std::move(rightCont)} {}
 
     template<typename L2, typename R2>
-    constexpr Continuation(const Continuation<L2, R2>& cont) : _leftCont{cont._leftCont}, _rightCont{cont._rightCont} {}
+    constexpr Continuation(const Continuation<L2, R2>& cont) : left{cont.left()}, right{cont.right()} {}
+
+    template<typename L2, typename R2>
+    constexpr Continuation(Continuation<L2, R2>&& cont) : left{std::move(cont.left())}, right{std::move(cont.right())} {}
 
     template<typename LeftContOther, typename RightContOther>
     constexpr auto operator|(const Continuation<LeftContOther, RightContOther>& other) const {
         const auto chainLeft = [other, *this](const auto& l) {
-            return other._leftCont(_leftCont(l));
+            return other.left(left(l));
         };
         const auto chainRight = [other, *this](const auto& r) {
-            return other._rightCont(_rightCont(r));
+            return other.right(right(r));
         };
         return Continuation<decltype(chainLeft), decltype(chainRight)>{chainLeft, chainRight};
     }
@@ -200,37 +203,37 @@ struct Continuation {
 
     template<typename E1, typename E2>
     constexpr auto operator()(const Either<E1, E2>& either) const {
-        using L = decltype(_leftCont(either.left()));
-        using R = decltype(_rightCont(either.right()));
+        using L = decltype(left(either.left()));
+        using R = decltype(right(either.right()));
 
         if (either.has_left()) {
-            return Either<L, R>{_leftCont(either.left()), nullptr};
+            return Either<L, R>{left(either.left()), nullptr};
         }
-        return Either<L, R>{nullptr, _rightCont(either.right())};
+        return Either<L, R>{nullptr, right(either.right())};
     }
 
     template<typename T>
     constexpr auto operator()(const Maybe<T>& maybe) const {
-        using Res = decltype(_leftCont(*maybe));
+        using Res = decltype(left(*maybe));
         if constexpr (is_instance<Res, Maybe>::value) {
             if (maybe) {
-                return _leftCont(*maybe);
+                return left(*maybe);
             }
-            _rightCont(nullptr);
+            right(nullptr);
             return Res{};
         } else {
             using Ret = Maybe<Res>;
             if (maybe) {
-                return Ret{_leftCont(*maybe)};
+                return Ret{left(*maybe)};
             }
-            _rightCont(nullptr);
+            right(nullptr);
             return Ret{};
         }
     }
 
     template<typename T>
     constexpr auto operator()(const Just<T>& just) const {
-        auto res = _leftCont(just);
+        auto res = left(just);
         if constexpr (is_instance<decltype(res), Either>::value ||
                       is_instance<decltype(res), Maybe>::value) {
             return res;
@@ -239,8 +242,8 @@ struct Continuation {
         }
     }
 
-    const LeftCont _leftCont;
-    const RightCont _rightCont;
+    const LeftCont left;
+    const RightCont right;
 };
 
 template<typename Func>
@@ -310,4 +313,3 @@ static_assert(*(hasValue && check([](const auto i) { return i > 10; })) == 12);
 } // namespace daydream
 
 int main() { return 0; }
-
