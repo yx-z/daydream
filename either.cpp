@@ -21,7 +21,7 @@ struct Continuation;
 template<typename L, typename R>
 struct Either {
     constexpr Either(L l, std::nullptr_t) : _left{std::move(l)} {}
-    
+
     constexpr Either(std::nullptr_t, R r) : _right{std::move(r)} {}
 
     template<typename L2, typename R2>
@@ -244,12 +244,12 @@ struct Continuation {
 };
 
 template<typename Func>
-constexpr static auto ContinueRight(const Func& rightFunc) {
+constexpr static auto ContinueRight(Func&& rightFunc) {
     return Continuation{identity, std::move(rightFunc)};
 }
 
 template<typename Predicate>
-constexpr auto check(const Predicate& predicate) {
+constexpr auto check(Predicate&& predicate) {
     return Continuation{[predicate](const auto& input) {
         using Ret = Maybe<std::decay_t<decltype(input)>>;
         return predicate(input) ? Ret{input} : Ret{};
