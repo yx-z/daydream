@@ -276,11 +276,16 @@ constexpr static auto ContinueRight(const Func& rightFunc) {
     return Continue{identity, rightFunc};
 }
 
-template <typename Predicate>
-constexpr auto check(Predicate predicate) {
-    return Continue{[pred = std::move(predicate)](const auto& input) {
+template <typename Predicate, typename OnEmpty = decltype(identity)>
+constexpr auto check(Predicate predicate, OnEmpty onEmpty = identity) {
+    return Continue{[pred = std::move(predicate),
+                     empty = std::move(onEmpty)](const auto& input) {
         using Ret = Maybe<std::decay_t<decltype(input)> >;
-        return pred(input) ? Ret{input} : Ret{};
+        if (pred(input)) {
+            return Ret{input};
+        }
+        empty(input);
+        return Ret{};
     }};
 }
 
