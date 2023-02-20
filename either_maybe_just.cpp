@@ -28,7 +28,7 @@ constexpr static inline auto is_monadic_v =
     is_instance<T, Just>::value;
 
 template <typename LeftCont, typename RightCont>
-struct ContinueEither;
+struct Continue;
 
 template <typename L, typename R>
 struct Either {
@@ -127,8 +127,7 @@ struct Maybe {
   constexpr operator bool() const { return has_value(); }
 
   template <typename LeftCont, typename RightCont>
-  constexpr auto operator&&(
-      const ContinueEither<LeftCont, RightCont>& cont) const {
+  constexpr auto operator&&(const Continue<LeftCont, RightCont>& cont) const {
     return cont(*this);
   }
 
@@ -214,29 +213,29 @@ struct Just {
 constexpr inline static auto identity = [](const auto& t) { return t; };
 
 template <typename LeftCont, typename RightCont = decltype(identity)>
-struct ContinueEither {
-  constexpr ContinueEither(LeftCont leftCont, RightCont rightCont = identity)
+struct Continue {
+  constexpr Continue(LeftCont leftCont, RightCont rightCont = identity)
       : left{std::move(leftCont)}, right{std::move(rightCont)} {}
 
   template <typename L2, typename R2>
-  constexpr ContinueEither(const ContinueEither<L2, R2>& cont)
+  constexpr Continue(const Continue<L2, R2>& cont)
       : left{cont.left()}, right{cont.right()} {}
 
   template <typename L2, typename R2>
-  constexpr ContinueEither(ContinueEither<L2, R2>&& cont)
+  constexpr Continue(Continue<L2, R2>&& cont)
       : left{std::move(cont.left())}, right{std::move(cont.right())} {}
 
   template <typename LeftContOther, typename RightContOther>
   constexpr auto operator|(
-      const ContinueEither<LeftContOther, RightContOther>& other) const {
+      const Continue<LeftContOther, RightContOther>& other) const {
     const auto chainLeft = [ other, *this ](const auto& l) {
       return other.left(left(l));
     };
     const auto chainRight = [ other, *this ](const auto& r) {
       return other.right(right(r));
     };
-    return ContinueEither<decltype(chainLeft), decltype(chainRight)>{
-        chainLeft, chainRight};
+    return Continue<decltype(chainLeft), decltype(chainRight)>{chainLeft,
+                                                               chainRight};
   }
 
   template <typename E1, typename E2>
@@ -282,12 +281,12 @@ struct ContinueEither {
 
 template <typename Func>
 constexpr static auto ContinueRight(Func&& rightFunc) {
-  return ContinueEither{identity, std::move(rightFunc)};
+  return Continue{identity, std::move(rightFunc)};
 }
 
 template <typename Predicate>
 constexpr auto check(Predicate&& predicate) {
-  return ContinueEither{[predicate](const auto& input) {
+  return Continue{[predicate](const auto& input) {
     using Ret = Maybe<std::decay_t<decltype(input)> >;
     return predicate(input) ? Ret{input} : Ret{};
   }};
@@ -299,13 +298,14 @@ constexpr auto check(Predicate&& predicate) {
 constexpr static auto basicUsage = Just{12} |
                                    [](const auto i) { return i + 1; } |
                                    [](const auto i) -> Either<int, float> {
-  if (i == 12)
+  if (i == 12) {
     return {14, nullptr};
+  }
   return {nullptr, 12.0};
-} | ContinueEither{[](const auto i) { return i; },
-                   [](const auto f) {
-                     return f + 2.0;
-                   }} | ContinueRight([](const auto f) { return f * 2.0; });
+} | Continue{[](const auto i) { return i; },
+             [](const auto f) {
+               return f + 2.0;
+             }} | ContinueRight([](const auto f) { return f * 2.0; });
 
 static_assert(!basicUsage.has_left());
 static_assert(basicUsage.right_or(0.0) == 28.0);
@@ -315,20 +315,20 @@ constexpr static auto dropped = Either<int, float>{12, nullptr} | DropRight{} |
                                 [](const auto i) { return i + 1; };
 static_assert((dropped || 12) == 13);
 
-// can chain ContinueEithers first, then apply to different input
+// can chain Continues first, then apply to different input
 constexpr static auto justOperations =
-    ContinueEither{[](const auto i) { return i + 1; }} |
-    ContinueEither{[](const auto i) { return i + 2; }};
+    Continue{[](const auto i) { return i + 1; }} |
+    Continue{[](const auto i) { return i + 2; }};
 constexpr static auto res1 = Just{0} | justOperations;
 static_assert(*res1 == 3);
 constexpr static auto res2 = Just{1} | justOperations;
 static_assert(*res2 == 4);
 
 constexpr static auto eitherOperations =
-    ContinueEither{[](const auto i) { return i + 1; },
-                   [](const auto f) { return f + 2.0; }} |
-    ContinueEither{[](const auto i) { return i + 2; },
-                   [](const auto f) { return f + 3.0; }};
+    Continue{[](const auto i) { return i + 1; },
+             [](const auto f) { return f + 2.0; }} |
+    Continue{[](const auto i) { return i + 2; },
+             [](const auto f) { return f + 3.0; }};
 constexpr static auto resL = Either<int, float>{1, nullptr} | eitherOperations;
 static_assert(!resL.has_right());
 static_assert(resL.left_or(0) == 4);
