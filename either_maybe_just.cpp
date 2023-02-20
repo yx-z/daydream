@@ -5,7 +5,7 @@
 
 namespace daydream {
     
-// is_instance<LeftCont, BaseTemplate>::value is true iff. LeftCont is of type BaseTemplate<T...> for some T...
+// is_instance<X, BaseTemplate>::value is true iff. X is of type BaseTemplate<T...> for some T...
 template<typename, template<typename...> typename>
 struct is_instance : public std::false_type {
 };
