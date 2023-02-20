@@ -74,7 +74,6 @@ private:
     const std::optional<R> _right;
 };
 
-
 template<typename T>
 struct Maybe {
     constexpr Maybe() {}
@@ -300,11 +299,11 @@ static_assert(!empty);
 static_assert((empty || 13) == 13);
 static_assert((empty || []() { return 14; }) == 14);
 
-constexpr static auto hasValue = Maybe<int>{12};
+constexpr static auto hasValue = Maybe{12};
 static_assert(*hasValue == 12);
 static_assert(*(empty || hasValue) == 12);
 
-static_assert(*(hasValue || Maybe<int>{13}) == 12);
+static_assert(*(hasValue || Maybe{13}) == 12);
 static_assert(!(empty && justOperations));
 static_assert(*(hasValue && justOperations) == 15);
 static_assert(*(hasValue && check([](const auto i) { return i > 10; })) == 12);
