@@ -187,7 +187,7 @@ struct Just {
 
   template <typename U>
   constexpr Just(Just<U>&& t)
-      : _val{t} {}
+      : _val{std::move(t)} {}
 
   constexpr const T& value() const { return _val; }
 
