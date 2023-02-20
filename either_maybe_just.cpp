@@ -102,9 +102,9 @@ template <typename T>
 struct Maybe {
   constexpr Maybe() {}
 
-  constexpr Maybe(T value) : _val{value} {}
+  constexpr Maybe(T value) : _val{std::move(value)} {}
 
-  constexpr Maybe(std::optional<T> value) : _val{value} {}
+  constexpr Maybe(std::optional<T> value) : _val{std::move(value)} {}
 
   template <typename U>
   constexpr Maybe(const Maybe<U>& maybe)
