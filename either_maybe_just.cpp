@@ -293,16 +293,16 @@ constexpr auto check(Predicate predicate, OnEmpty onEmpty = identity) {
 
 // chain operations
 constexpr static auto basicUsage =
-    Just{12} | [](const auto i) { return i + 1; } |
-    [](const auto i) -> Either<int, float> {
-    if (i == 12) {
-        return {14, nullptr};
-    }
-    return {nullptr, 12.0};
-} |
-                            Continue{[](const auto i) { return i; },
-                                     [](const auto f) { return f + 2.0; }} |
-                            ContinueRight([](const auto f) { return f * 2.0; });
+    Just{12}
+    | [](const auto i) { return i + 1; }
+    | [](const auto i) -> Either<int, float> {
+            if (i == 12) {
+                return {14, nullptr};
+            }
+            return {nullptr, 12.0};}
+    | Continue{[](const auto i) { return i; },
+               [](const auto f) { return f + 2.0; }} 
+    | ContinueRight([](const auto f) { return f * 2.0; });
 
 static_assert(!basicUsage.has_left());
 static_assert(basicUsage.right_or(0.0) == 28.0);
