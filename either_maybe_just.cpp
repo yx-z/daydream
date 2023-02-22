@@ -5,8 +5,8 @@
 
 namespace daydream {
 
-// is_instance<X, BaseTemplate>::value is true iff. X is of type
-// BaseTemplate<T...> for some T...
+    // is_instance<X, BaseTemplate>::value is true iff. X is of type
+    // BaseTemplate<T...> for some T...
     template<typename, template<typename...> typename>
     struct is_instance : public std::false_type {
     };
@@ -262,9 +262,9 @@ namespace daydream {
         }};
     }
 
-// Test
+    // Test
 
-// chain operations
+    // chain operations
     constexpr static auto basicUsage =
             Just{12}
             | [](const auto i) { return i + 1; }
@@ -281,14 +281,14 @@ namespace daydream {
     static_assert(!basicUsage.has_left());
     static_assert(basicUsage.right_or(0.0) == 28.0);
 
-// chain then drop
+    // chain then drop
     constexpr static auto dropped =
             Either<int, float>{12, nullptr}
             | DropRight{}
             | [](const auto i) { return i + 1; };
     static_assert((dropped || 12) == 13);
 
-// can chain Continues first, then apply to different input
+    // can chain `Continue` first, then apply to different input
     constexpr static auto justOperations =
             Continue{[](const auto i) { return i + 1; }} |
             Continue{[](const auto i) { return i + 2; }};
@@ -310,7 +310,7 @@ namespace daydream {
     static_assert(!resR.has_left());
     static_assert(resR.right_or(0.0) == 15.0);
 
-// Maybe monad
+    // Maybe monad
     constexpr static auto empty = Maybe<int>{};
     static_assert(!empty);
     static_assert((empty || 13) == 13);
@@ -327,6 +327,6 @@ namespace daydream {
     static_assert(*(hasValue && check([](const auto i) { return i > 10; })) == 12);
     static_assert(!(hasValue && check([](const auto i) { return i > 100; })));
 
-}  // namespace daydream
+} // namespace daydream
 
 int main() { return 0; }
