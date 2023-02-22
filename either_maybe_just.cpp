@@ -290,8 +290,8 @@ namespace daydream {
 
     // can chain `Continue` first, then apply to different input
     constexpr static auto justOperations =
-            Continue{[](const auto i) { return i + 1; }} |
-            Continue{[](const auto i) { return i + 2; }};
+            Continue{[](const auto i) { return i + 1; }}
+            | Continue{[](const auto i) { return i + 2; }};
     constexpr static auto res1 = Just{0} | justOperations;
     static_assert(*res1 == 3);
     constexpr static auto res2 = Just{1} | justOperations;
@@ -299,9 +299,9 @@ namespace daydream {
 
     constexpr static auto eitherOperations =
             Continue{[](const auto i) { return i + 1; },
-                     [](const auto f) { return f + 2.0; }} |
-            Continue{[](const auto i) { return i + 2; },
-                     [](const auto f) { return f + 3.0; }};
+                     [](const auto f) { return f + 2.0; }}
+            | Continue{[](const auto i) { return i + 2; },
+                       [](const auto f) { return f + 3.0; }};
     constexpr static auto resL = Either<int, float>{1, nullptr} | eitherOperations;
     static_assert(!resL.has_right());
     static_assert(resL.left_or(0) == 4);
