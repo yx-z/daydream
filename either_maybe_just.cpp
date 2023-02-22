@@ -314,7 +314,7 @@ namespace daydream {
     constexpr static auto empty = Maybe<int>{};
     static_assert(!empty);
     static_assert((empty || 13) == 13);
-    static_assert((empty || []() { return 14; }) == 14);
+    static_assert((empty || [] { return 14; }) == 14);
     static_assert(!(empty && justOperations));
 
     constexpr static auto hasValue = Maybe{12};
