@@ -241,18 +241,15 @@ namespace daydream {
     template<typename Func>
     constexpr static auto ContinueRight(const Func& rightFunc) { return Continue{identity, rightFunc}; }
 
-    constexpr static auto noOp = [](const auto&) {};
-
-    template<typename Predicate, typename OnEmpty = decltype(noOp)>
-    constexpr auto check(Predicate predicate, OnEmpty onEmpty = noOp) {
-        return Continue{[pred = std::move(predicate), empty = std::move(onEmpty)](const auto& input) {
-            using Ret = Maybe<std::decay_t<decltype(input)> >;
+    template<typename Predicate>
+    constexpr auto check(Predicate predicate) {
+        return [pred = std::move(predicate)](const auto& input) {
+            using Ret = Maybe<std::remove_cv_t<std::remove_reference_t<decltype(input)>>>;
             if (pred(input)) {
                 return Ret{input};
             }
-            empty(input);
             return Ret{};
-        }};
+        };
     }
 
     // Test
