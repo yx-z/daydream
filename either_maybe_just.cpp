@@ -66,6 +66,8 @@ namespace daydream {
         template<typename Func>
         constexpr auto operator|(Func&& cont) const { return cont(*this); }
 
+        constexpr Either<R, L> swap() const { return {_right, _left}; }
+
     private:
         const std::optional<L> _left;
         const std::optional<R> _right;
