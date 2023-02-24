@@ -6,13 +6,13 @@
 namespace daydream {
 
     // is_instance<X, BaseTemplate>::value is true iff. X is of type
-    // BaseTemplate<T...> for some T...
+    // BaseTemplate<Param...> for some Param...
     template<typename, template<typename...> typename>
     struct is_instance : public std::false_type {
     };
 
-    template<typename... T, template<typename...> typename BaseTemplate>
-    struct is_instance<BaseTemplate<T...>, BaseTemplate> : public std::true_type {
+    template<typename... Param, template<typename...> typename BaseTemplate>
+    struct is_instance<BaseTemplate<Param...>, BaseTemplate> : public std::true_type {
     };
 
     template<typename L, typename R>
@@ -111,48 +111,35 @@ namespace daydream {
 
         constexpr operator std::optional<T>() const { return _val; }
 
-        constexpr const T& value() const noexcept(false) { return *_val; }
+        constexpr const T& operator*() const noexcept(false) { return *_val; }
 
-        constexpr const T& operator*() const noexcept(false) { return value(); }
-
-        constexpr bool has_value() const { return bool(_val); }
-
-        constexpr operator bool() const { return has_value(); }
+        constexpr operator bool() const { return bool(_val); }
 
         template<typename LeftCont, typename RightCont>
         constexpr auto operator&&(const Continue<LeftCont, RightCont>& cont) const { return cont(*this); }
 
         template<typename Func>
         constexpr auto operator&&(Func&& cont) const {
-            using Res = decltype(cont(value()));
+            using Res = decltype(cont(*_val));
             if constexpr (is_monadic_v<Res>) {
-                return has_value() ? cont(value()) : Res{};
+                return _val ? cont(*_val) : Res{};
             } else {
                 using Ret = Maybe<Res>;
-                return has_value() ? Ret{cont(value())} : Ret{};
+                return _val ? Ret{cont(*_val)} : Ret{};
             }
         }
 
         template<typename Func>
-        constexpr auto operator|(Func&& func) const { return *this && func; }
+        constexpr auto operator|(Func&& func) const { return *this && std::forward<Func>(func); }
 
         template<typename U>
-        constexpr Maybe<T> value_or(const Maybe<U>& other) const { return has_value() ? *this : other; }
+        constexpr Maybe<T> operator||(const Maybe<U>& other) const { return _val ? *this : other; }
 
-        template<typename U>
-        constexpr Maybe<T> operator||(const Maybe<U>& other) const { return value_or(other); }
-
-        template<typename U>
-        constexpr T value_or(const U& t) const { return has_value() ? value() : t; }
-
-        template<typename U>
-        constexpr T operator||(const U& t) const { return value_or(t); }
-
-        template<typename Func>
-        constexpr T value_or_eval(Func&& func) const { return has_value() ? value() : func(); }
+        template<typename U, std::enable_if_t<std::is_convertible_v<U, T>, int> = 0>
+        constexpr T operator||(const U& t) const { return _val ? *_val : t; }
 
         template<typename Func, std::enable_if_t<std::is_convertible_v<std::invoke_result_t<Func>, T>, int> = 0>
-        constexpr T operator||(Func&& func) const { return value_or_eval(func); }
+        constexpr T operator||(Func&& func) const { return _val ? *_val : func(); }
 
     private:
         const std::optional<T> _val;
@@ -168,15 +155,13 @@ namespace daydream {
         template<typename U>
         constexpr Just(Just<U>&& t) : _val{std::move(t)} {}
 
-        constexpr const T& value() const { return _val; }
+        constexpr const T& operator*() const { return _val; }
 
-        constexpr const T& operator*() const { return value(); }
-
-        constexpr operator T() const { return value(); }
+        constexpr operator T() const { return _val; }
 
         template<typename Func>
         constexpr auto operator|(Func&& cont) const {
-            auto res = cont(value());
+            auto res = cont(_val);
             if constexpr (is_monadic_v<decltype(res)>) {
                 return res;
             } else {
@@ -206,6 +191,12 @@ namespace daydream {
             const auto chainLeft = [other, *this](const auto& l) { return other.left(left(l)); };
             const auto chainRight = [other, *this](const auto& r) { return other.right(right(r)); };
             return Continue<decltype(chainLeft), decltype(chainRight)>{chainLeft, chainRight};
+        }
+
+        template<typename Func>
+        constexpr auto operator|(const Func& other) const {
+            const auto chain = [other, *this](const auto& l) { return other(left(l)); };
+            return Continue<decltype(chain), RightCont>{chain, right};
         }
 
         template<typename E1, typename E2>
@@ -290,8 +281,7 @@ namespace daydream {
 
     // can chain `Continue` first, then apply to different input
     constexpr static auto justOperations =
-            Continue{[](const auto i) { return i + 1; }}
-            | Continue{[](const auto i) { return i + 2; }};
+            Continue{[](const auto i) { return i + 1; }} | [](const auto i) { return i + 2; };
     constexpr static auto res1 = Just{0} | justOperations;
     static_assert(*res1 == 3);
     constexpr static auto res2 = Just{1} | justOperations;
@@ -314,7 +304,7 @@ namespace daydream {
     constexpr static auto empty = Maybe<int>{};
     static_assert(!empty);
     static_assert((empty || 13) == 13);
-    static_assert((empty || []{ return 14; }) == 14);
+    static_assert((empty || [] { return 14; }) == 14);
     static_assert(!(empty && justOperations));
 
     constexpr static auto hasValue = Maybe{12};
