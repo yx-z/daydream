@@ -297,7 +297,7 @@ namespace daydream {
     static_assert(!basicUsage.has_left());
     static_assert(basicUsage.right_or(0.0) == 28.0);
 
-    // chain then drop
+    // chain/drop/swap
     constexpr static auto dropped =
             either<int, float>{12, nullptr}
             | drop_right{}
@@ -307,7 +307,7 @@ namespace daydream {
     constexpr static auto swapThenDrop = either<float, int>{12.0, nullptr} | swap{} | drop_left{};
     static_assert(*(swapThenDrop) == 12.0);
 
-    // can chain `continue_either` first, then apply to different input
+    // can chain `continue_*` first, then apply to different input
     constexpr static auto justOperations =
             continue_left{[](const auto i) { return i + 1; }} | [](const auto i) { return i + 2; };
     constexpr static auto res1 = just{0} | justOperations;
