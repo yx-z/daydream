@@ -174,9 +174,6 @@ namespace daydream {
         const T _val;
     };
 
-    constexpr inline static auto identity = [](const auto& t) { return t; };
-    using identity_t = decltype(identity);
-
     template<typename LeftCont, typename RightCont>
     struct continue_either {
         constexpr continue_either(LeftCont leftCont, RightCont rightCont) : left{std::move(leftCont)},
@@ -239,6 +236,9 @@ namespace daydream {
         const LeftCont left;
         const RightCont right;
     };
+
+    constexpr inline static auto identity = [](const auto& t) { return t; };
+    using identity_t = decltype(identity);
 
     template<typename Func>
     struct continue_left : continue_either<Func, identity_t> {
