@@ -69,11 +69,23 @@ namespace daydream {
         template<typename Func>
         constexpr auto operator|(const Func& cont) const { return cont(*this); }
 
-        constexpr either<R, L> swap() const { return {_right, _left}; }
+        constexpr either<R, L> swap() const {
+            if (_left) {
+                return {nullptr, *_left};
+            }
+            return {*_right, nullptr};
+        }
 
     private:
         const std::optional<L> _left;
         const std::optional<R> _right;
+    };
+
+    struct swap {
+        template<typename L, typename R>
+        constexpr either<R, L> operator()(const either<L, R>& either) const {
+            return either.swap();
+        }
     };
 
     struct drop_right {
@@ -291,6 +303,9 @@ namespace daydream {
             | drop_right{}
             | [](const auto i) { return i + 1; };
     static_assert((dropped || 12) == 13);
+
+    constexpr static auto swapThenDrop = either<float, int>{12.0, nullptr} | swap{} | drop_left{};
+    static_assert(*(swapThenDrop) == 12.0);
 
     // can chain `continue_either` first, then apply to different input
     constexpr static auto justOperations =
