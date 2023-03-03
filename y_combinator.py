@@ -50,7 +50,7 @@ fact = (lambda f: lambda n: 1 if n < 2 else n * f(f)(n - 1))(lambda f: lambda n:
 # to show everything works still
 print(fact(5))
 
-# reconsider this from line 42:
+# reconsider this from line 44: 
 fact = (lambda f: (lambda n: 1 if n < 2 else n * f(n - 1)))(fact)
 # the first part is understandable, mostly the "business logic" of the recursive function
 # so extract out the first half, where `R_` stands for Raw - later becomes our input to `Y`
