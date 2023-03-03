@@ -62,7 +62,7 @@ R_fact = lambda f: lambda n: 1 if n < 2 else n * f(n - 1)
 # we see R_fact(t) = (lambda x: R_fact(x))(t),
 # then Y(R_fact) = R_fact( Y(R_fact) ) = (lambda x: R_fact(x))( Y(R_fact) )
 # here think `x` as something similar to `f` above, i.e. a function
-# see `Y(R_fact)` is essentially an abstract `fact` as above on line 42
+# see `Y(R_fact)` is essentially an abstract `fact` as above on line 44
 # and it's also under the same circumstance of self referencing variable name
 # so we need copy-paste trick (copy first half to second half) which gives:
 # Y(R_fact) = (lambda x: R_fact(x))( lambda x: R_fact(x) )
