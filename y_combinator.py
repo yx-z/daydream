@@ -58,8 +58,9 @@ R_fact = lambda f: lambda n: 1 if n < 2 else n * f(n - 1)
 # then fact = R_fact(fact) <-> `fact` is called a fixed point of `R_fact`
 # our goal is to figure out `fact`
 
-# suppose we have an oracle `Y`, so that fact = Y(R_fact) = R_fact( Y(R_fact) )
-# we see R_fact(t) = (lambda x: R_fact(x))(t),
+# suppose we have an oracle `Y`, so that fact = Y(R_fact). Then Y(R_fact) = fact = R_fact(fact) = R_fact( Y(R_fact) )
+#                                                                     line61   line58         replace fact one more time
+# Now.l, separately,  we see R_fact(t) = (lambda x: R_fact(x))(t),
 # then Y(R_fact) = R_fact( Y(R_fact) ) = (lambda x: R_fact(x))( Y(R_fact) )
 # here think `x` as something similar to `f` above, i.e. a function
 # see `Y(R_fact)` is essentially an abstract `fact` as above on line 44
@@ -67,7 +68,7 @@ R_fact = lambda f: lambda n: 1 if n < 2 else n * f(n - 1)
 # so we need copy-paste trick (copy first half to second half) which gives:
 # Y(R_fact) = (lambda x: R_fact(x))( lambda x: R_fact(x) )
 # now same as line 46, we need to call `x` with itself.
-# this is because, see how `R_fact` uses the input parameter `f` on line 54:
+# this is because, see how `R_fact` uses the input parameter `f` on line 57:
 # `R_fact` only takes `f` that can be supplied with economic arguments, e.g. `n`
 # without partial applying `x` with itself, `x` still takes a function (itself) as first argument.
 # so we have Y(R_fact) = ( lambda x: R_fact(x(x)) )( lambda x: R_fact(x(x)) )
