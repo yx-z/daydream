@@ -40,9 +40,9 @@ print((lambda n: (lambda f: lambda n: 1 if n < 2 else n * f(f)(n - 1))(
 # so next goal is to construct a `Y` combinator that turns any such recursive function into the ones we are familiar with,
 # at the same time, still not self referencing function variable name
 
-# first, swap parameter order of `help` on line 15, and curry it to facilitate later constructing `Y`
+# reconsider `help` on line 15, and curry it to facilitate later constructing `Y`
 fact = (lambda f: lambda n: 1 if n < 2 else n * f(n - 1))(fact)
-#                                                         ^^^ a hypothetical `fact` taking one true argument `n`. like equations in math, fact is the unknown but pretend we have fact.
+#                                                         ^^^ we need a hypothetical `fact` taking one true argument `n`. like equations in math, fact is the unknown but pretend we have fact. then left hand side is exactly what we want to figure out 
 # try doing copy-paste trick (copy first half to second half)
 fact = (lambda f: lambda n: 1 if n < 2 else n * f(n - 1))(lambda f: lambda n: 1 if n < 2 else n * f(n - 1))
 # we find out that `f` needs to be applied with two arguments, first with itself. just as `help` does on line 19
