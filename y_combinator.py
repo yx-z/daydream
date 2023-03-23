@@ -67,7 +67,7 @@ R_fact = lambda f: lambda n: 1 if n < 2 else n * f(n - 1)
 # and it's also under the same circumstance of self referencing variable name
 # so we need copy-paste trick (copy first half to second half) which gives:
 # Y(R_fact) = (lambda x: R_fact(x))( lambda x: R_fact(x) )
-# now same as line 46, we need to call `x` with itself.
+# now same as line 48, we need to call `x` with itself.
 # this is because, see how `R_fact` uses the input parameter `f` on line 57:
 # `R_fact` only takes `f` that can be supplied with economic arguments, e.g. `n`
 # without partial applying `x` with itself, `x` still takes a function (itself) as first argument.
