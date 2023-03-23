@@ -40,7 +40,7 @@ print((lambda n: (lambda f: lambda n: 1 if n < 2 else n * f(f)(n - 1))(
 # so next goal is to construct a `Y` combinator that turns any such recursive function into the ones we are familiar with,
 # at the same time, still not self referencing function variable name
 
-# first, swap parameter order to facilitate later constructing `Y`
+# first, swap parameter order of `help` on line  to facilitate later constructing `Y`
 fact = (lambda f: lambda n: 1 if n < 2 else n * f(n - 1))(fact)
 #                                                         ^^^ a hypothetical `fact` taking one true argument `n`
 # try doing copy-paste trick (copy first half to second half)
@@ -60,7 +60,7 @@ R_fact = lambda f: lambda n: 1 if n < 2 else n * f(n - 1)
 
 # suppose we have an oracle `Y`, so that fact = Y(R_fact). Then Y(R_fact) = fact = R_fact(fact) = R_fact( Y(R_fact) )
 #                                                                     line61   line58         replace fact one more time
-# Now.l, separately,  we see R_fact(t) = (lambda x: R_fact(x))(t),
+# Now, separately,  we see R_fact(t) = (lambda x: R_fact(x))(t),
 # then Y(R_fact) = R_fact( Y(R_fact) ) = (lambda x: R_fact(x))( Y(R_fact) )
 # here think `x` as something similar to `f` above, i.e. a function
 # see `Y(R_fact)` is essentially an abstract `fact` as above on line 44
