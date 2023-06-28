@@ -56,7 +56,8 @@ const static auto two_args = curry(
     std::function([](std::tuple<int, int> pair) { return std::get<0>(pair) + std::get<1>(pair); })
 );
 const static auto three_args = curry(
-    std::function([](std::tuple<int, int, int> triple) { return std::get<0>(triple) * std::get<1>(triple) * std::get<2>(triple); })
+    std::function([](std::tuple<int, int, int> triple) {
+        return std::get<0>(triple) * std::get<1>(triple) * std::get<2>(triple); })
 );
 
 int main() {
