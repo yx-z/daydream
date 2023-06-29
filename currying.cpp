@@ -16,13 +16,13 @@ constexpr auto currying(Func&& func) {
     }
 }
 
-constexpr static auto addThenMult = [](int i1, int i2, int i3) { return (i1 + i2) * i3; };
-constexpr static auto res = currying(addThenMult)(1)(2)(3);
-static_assert(res == 9);
+static_assert(currying([](auto i1) { return i1 + 1; })(11) == 12);
+
+constexpr static auto add_then_mult = currying([](auto i1, auto i2, auto i3) { return (i1 + i2) * i3; });
+static_assert(add_then_mult(1)(2)(3) == 9);
+
 
 // separate implementation involving std::function
-// curry of zero-and-one-arg functions are trivial: curry(f) = f for such functions.
-// hence their specializations are ignored.
 template<typename Ret, typename Arg, typename... Args>
 auto curry(std::function<Ret(Arg, Args...)> f) {
     if constexpr (sizeof...(Args) == 0) {
@@ -35,9 +35,14 @@ auto curry(std::function<Ret(Arg, Args...)> f) {
 }
 
 int main() {
+    const static auto one_arg = curry(std::function{[](int i1) { return i1 + 1; }});
+    std::cout << one_arg(2) << std::endl; // 3
+
     const static auto two_args = curry(std::function{[](int i1, int i2) { return i1 + i2; }});
-    const static auto three_args = curry(std::function{[](int i1, int i2, int i3) { return i1 + i2 * i3; }});
     std::cout << two_args(1)(2) << std::endl; // 3
+
+    const static auto three_args = curry(std::function{[](int i1, int i2, int i3) { return i1 + i2 * i3; }});
     std::cout << three_args(1)(2)(3) << std::endl; // 7
+
     return 0;
 }
