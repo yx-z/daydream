@@ -3,14 +3,16 @@
 #include <iostream>
 
 template<typename Func>
-constexpr auto currying(Func&& func) {
+constexpr auto currying(Func func) {
     if constexpr (std::is_invocable_v<Func>) {
         // at the last step, we have to produce result instead of returning new functions
         return func();
     } else {
-        return [func](auto&& arg) {
+        return [func = std::move(func)](auto arg) {
             return currying(
-                    [func, arg](auto&& ...args) -> decltype(func(arg, args...)) { return func(arg, args...); }
+                    [func = std::move(func), arg = std::move(arg)](auto&& ...args) -> decltype(func(arg, args...)) {
+                        return func(arg, args...);
+                    }
             );
         };
     }
@@ -20,7 +22,6 @@ static_assert(currying([](auto i1) { return i1 + 1; })(11) == 12);
 
 constexpr static auto add_then_mult = currying([](auto i1, auto i2, auto i3) { return (i1 + i2) * i3; });
 static_assert(add_then_mult(1)(2)(3) == 9);
-
 
 // separate implementation involving std::function
 template<typename Ret, typename Arg, typename... Args>
