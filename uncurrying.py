@@ -6,3 +6,6 @@ def uncurry(func):
         return res
 
     return uncurried
+
+
+print(uncurry(lambda x: lambda y: lambda z: x + (y * z))(1, 2, 3) == 7)
