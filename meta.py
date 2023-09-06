@@ -2,7 +2,7 @@
 Python metaprogramming playground
 """
 from __future__ import annotations
-from typing import TypeVar, Any, List, Generic
+from typing import TypeVar, Any, Iterable, Generic
 import builtins
 
 # a loose mockup of Haskell's `let ... in ...` notation
@@ -41,10 +41,10 @@ class of(Generic[V]):
         return self.val
 
 T = TypeVar("T")
-def first(ls: List[T]) -> Optional[T]:
+def first(ls: Iterable[T]) -> Optional[T]:
     return next(iter(ls), None)
 
-def add_one(i: int) -> int:
-    return i + 1
+def add(i1: int, i2: int) -> int:
+    return i1 + i2
 
-print(of([1,2,3]).first().add_one().take() == 2)  # True
+print(of([1,2,3]).first().add(3).take() == 4)  # True
