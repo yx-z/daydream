@@ -5,13 +5,15 @@ from __future__ import annotations
 from typing import TypeVar, Any, Iterable, Generic
 import builtins
 
-# a loose mockup of Haskell's `let ... in ...` notation
-# restrict variable scope in the expression only (in `__rshift__`)
+# =====
+# 1. a loose mockup of Haskell's `let ... in ...` notation
+#    to restrict variable scope in the expression only (in `__rshift__`)
 class let:
     def __init__(self: Self, **kwargs: Any) -> None:
         self.existing_globals = {k: globals()[k] for k in kwargs if k in globals()}
         self.temp_globals = {k for k in kwargs if k not in globals()}
-        globals().update(kwargs)
+        globals().update({k: v for k, v in kwargs.items() if not isinstance(v, lazy)})
+        globals().update({k: eval(v.expr) for k, v in kwargs.items() if isinstance(v, lazy)})
     
     T = TypeVar("T")
     def __rshift__(self: Self, val: T) -> T:
@@ -20,12 +22,21 @@ class let:
             del globals()[k]
         return val
 
+# sentinel class to lazy eval `kwargs` in `let`
+class lazy:
+    def __init__(self: Self, expr: str) -> None:
+        if not isinstance(expr, str):
+            raise RuntimeError(f"<class lazy> expects expression str, got {expr}")
+        self.expr = expr
+
 data = [10, 11, 12]
 first = 13
-print(let(first=data[0]) >> {"first": first, "first_plus_one": first+1}) # {"first": 10, "first_plus_one": 11}
+print(let(first=data[0], second=lazy("first+1")) >> {"first": first, "second": second}) # {"first": 10, "second": 11}
 print(first == 13) # True
 
-# turn functions into post-fix notations
+
+# =====
+# 2. turn functions into post-fix notations
 V = TypeVar("V")
 class of(Generic[V]):
     def __init__(self: Self, val: V) -> None:
