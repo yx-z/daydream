@@ -13,7 +13,8 @@ class let:
         self.existing_globals = {k: globals()[k] for k in kwargs if k in globals()}
         self.temp_globals = {k for k in kwargs if k not in globals()}
         globals().update({k: v for k, v in kwargs.items() if not isinstance(v, lazy)})
-        globals().update({k: eval(v.expr) for k, v in kwargs.items() if isinstance(v, lazy)})
+        for k, v in filter(lambda t: isinstance(t[1], lazy), kwargs.items()):
+            globals()[k] = eval(v.expr)
     
     T = TypeVar("T")
     def __rshift__(self: Self, val: T) -> T:
@@ -31,7 +32,11 @@ class lazy:
 
 data = [10, 11, 12]
 first = 13
-print(let(first=data[0], second=lazy("first+1")) >> {"first": first, "second": second}) # {"first": 10, "second": 11}
+print(let(first=data[0],
+          second=lazy("first+1"),
+          summed=lazy("first+second"),
+         ) >> {"first": first, "second": second, "summed": summed}
+     ) # {"first": 10, "second": 11, "summed": 21}
 print(first == 13) # True
 
 
