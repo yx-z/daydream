@@ -42,7 +42,7 @@ class of(Generic[V]):
     def __init__(self: Self, val: V) -> None:
         self.val = val
 
-    def __getattr__(self: Self, name: name) -> Callable[..., Any]:
+    def __getattr__(self: Self, name: name) -> Any:
         attr = getattr(builtins, name) if name in dir(builtins) else globals()[name]
         if callable(attr):
             return lambda *args, **kwargs: of(attr(self.val, *args, **kwargs))
